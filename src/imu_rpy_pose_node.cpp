@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "imu_rpy_pose/imu_processor.hpp"
+#include "imu_rpy_pose/yaw_unwrapper.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <visualization_msgs/msg/marker.hpp>
+#include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace imu_rpy_pose
@@ -97,13 +99,18 @@ private:
     marker.pose.position.y = processor_.position().y();
     marker.pose.position.z = processor_.position().z();
 
-    tf2::Quaternion q;
     const auto & ori = processor_.orientation();
-    q.setX(ori.x());
-    q.setY(ori.y());
-    q.setZ(ori.z());
-    q.setW(ori.w());
-    marker.pose.orientation = tf2::toMsg(q);
+    tf2::Quaternion full_q;
+    full_q.setX(ori.x());
+    full_q.setY(ori.y());
+    full_q.setZ(ori.z());
+    full_q.setW(ori.w());
+
+    const double yaw = yaw_unwrapper_.unwrap(tf2::getYaw(full_q));
+    tf2::Quaternion yaw_q;
+    yaw_q.setRPY(0.0, 0.0, yaw);
+    yaw_q.normalize();
+    marker.pose.orientation = tf2::toMsg(yaw_q);
 
     marker.scale.x = 0.3;
     marker.scale.y = 0.05;
@@ -123,6 +130,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
   bool calibration_announced_{false};
+  YawUnwrapper yaw_unwrapper_;
   ImuProcessor processor_;
 };
 

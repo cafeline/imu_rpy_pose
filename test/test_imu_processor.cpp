@@ -7,6 +7,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "imu_rpy_pose/imu_processor.hpp"
+#include "imu_rpy_pose/yaw_unwrapper.hpp"
 
 using imu_rpy_pose::ImuProcessor;
 using imu_rpy_pose::ImuProcessorParams;
@@ -126,6 +127,24 @@ TEST(ImuProcessor, IntegratesYawPitchRoll)
   EXPECT_NEAR(rpy[2], 1.0, 1e-2);
   EXPECT_NEAR(rpy[0], 0.0, 1e-3);
   EXPECT_NEAR(rpy[1], 0.0, 1e-3);
+}
+
+TEST(YawUnwrapper, KeepsYawContinuousAcrossNegativeWrap)
+{
+  imu_rpy_pose::YawUnwrapper unwrap;
+  EXPECT_NEAR(unwrap.unwrap(3.10), 3.10, 1e-9);
+  EXPECT_NEAR(unwrap.unwrap(3.12), 3.12, 1e-9);
+  // -3.13rad は +3.153185...rad と連続になるはず（2πラップを除去）
+  EXPECT_NEAR(unwrap.unwrap(-3.13), 3.153185307179587, 1e-6);
+}
+
+TEST(YawUnwrapper, KeepsYawContinuousAcrossPositiveWrap)
+{
+  imu_rpy_pose::YawUnwrapper unwrap;
+  EXPECT_NEAR(unwrap.unwrap(-3.10), -3.10, 1e-9);
+  EXPECT_NEAR(unwrap.unwrap(-3.12), -3.12, 1e-9);
+  // +3.13rad は -3.153185...rad と連続になるはず
+  EXPECT_NEAR(unwrap.unwrap(3.13), -3.153185307179587, 1e-6);
 }
 
 int main(int argc, char ** argv)
