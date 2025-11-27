@@ -3,7 +3,7 @@ livox_imu_test:
     imu_topic: "livox/imu"
     bias_sample_count: 1000
     clip_enable: true
-    clip_max_rad_per_s: 5.0
+    clip_max_rad_per_s: 10.0
     lpf_enable: true
     lpf_alpha: 0.2
     dt_check_enable: true
