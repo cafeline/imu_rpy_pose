@@ -6,10 +6,10 @@
 #include <Eigen/Geometry>
 #include <rclcpp/rclcpp.hpp>
 
-#include "livox_imu_test/imu_processor.hpp"
+#include "imu_rpy_pose/imu_processor.hpp"
 
-using livox_imu_test::ImuProcessor;
-using livox_imu_test::ImuProcessorParams;
+using imu_rpy_pose::ImuProcessor;
+using imu_rpy_pose::ImuProcessorParams;
 
 TEST(ImuProcessor, BiasEstimationStopsIntegrationUntilReady)
 {

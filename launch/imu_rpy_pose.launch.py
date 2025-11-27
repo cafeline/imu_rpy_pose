@@ -5,13 +5,13 @@ import os
 
 
 def generate_launch_description():
-    pkg_share = get_package_share_directory('livox_imu_test')
-    param_file = os.path.join(pkg_share, 'config', 'livox_imu_test.param.yaml')
+    pkg_share = get_package_share_directory('imu_rpy_pose')
+    param_file = os.path.join(pkg_share, 'config', 'imu_rpy_pose.param.yaml')
 
     imu_node = Node(
-        package='livox_imu_test',
-        executable='livox_imu_test_node',
-        name='livox_imu_test',
+        package='imu_rpy_pose',
+        executable='imu_rpy_pose_node',
+        name='imu_rpy_pose',
         output='screen',
         parameters=[param_file]
     )

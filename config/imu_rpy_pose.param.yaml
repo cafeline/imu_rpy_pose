@@ -1,4 +1,4 @@
-livox_imu_test:
+imu_rpy_pose:
   ros__parameters:
     imu_topic: "livox/imu"
     bias_sample_count: 1000

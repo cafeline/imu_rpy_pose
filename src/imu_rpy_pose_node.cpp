@@ -1,21 +1,21 @@
 // SPDX-FileCopyrightText: 2025 Ryo Funai
 // SPDX-License-Identifier: Apache-2.0
 
-#include "livox_imu_test/imu_processor.hpp"
+#include "imu_rpy_pose/imu_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-namespace livox_imu_test
+namespace imu_rpy_pose
 {
 
-class LivoxImuNode : public rclcpp::Node
+class ImuRpyPoseNode : public rclcpp::Node
 {
 public:
-  LivoxImuNode()
-  : Node("livox_imu_test")
+  ImuRpyPoseNode()
+  : Node("imu_rpy_pose")
   {
     declare_parameters();
     load_parameters();
@@ -25,7 +25,7 @@ public:
 
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
       imu_topic_, rclcpp::SensorDataQoS(),
-      std::bind(&LivoxImuNode::imuCallback, this, std::placeholders::_1));
+      std::bind(&ImuRpyPoseNode::imuCallback, this, std::placeholders::_1));
   }
 
 private:
@@ -40,9 +40,6 @@ private:
     this->declare_parameter<bool>("dt_check_enable", true);
     this->declare_parameter<double>("dt_min", 0.0005);
     this->declare_parameter<double>("dt_max", 0.05);
-    this->declare_parameter<bool>("use_accel", true);
-    this->declare_parameter<bool>("gravity_compensation", true);
-    this->declare_parameter<double>("gravity", 9.81);
     this->declare_parameter<std::string>("marker_frame", "livox_frame");
     this->declare_parameter<std::string>("marker_topic", "imu_arrow");
   }
@@ -92,7 +89,7 @@ private:
     visualization_msgs::msg::Marker marker;
     marker.header.stamp = msg->header.stamp;
     marker.header.frame_id = marker_frame_;
-    marker.ns = "livox_imu";
+    marker.ns = "imu_rpy_pose";
     marker.id = 0;
     marker.type = visualization_msgs::msg::Marker::ARROW;
     marker.action = visualization_msgs::msg::Marker::ADD;
@@ -129,12 +126,12 @@ private:
   ImuProcessor processor_;
 };
 
-}  // namespace livox_imu_test
+}  // namespace imu_rpy_pose
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<livox_imu_test::LivoxImuNode>();
+  auto node = std::make_shared<imu_rpy_pose::ImuRpyPoseNode>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

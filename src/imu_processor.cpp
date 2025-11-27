@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2025 Ryo Funai
 // SPDX-License-Identifier: Apache-2.0
 
-#include "livox_imu_test/imu_processor.hpp"
+#include "imu_rpy_pose/imu_processor.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-namespace livox_imu_test
+namespace imu_rpy_pose
 {
 
 namespace
@@ -154,4 +154,4 @@ bool ImuProcessor::process(
   return true;
 }
 
-}  // namespace livox_imu_test
+}  // namespace imu_rpy_pose

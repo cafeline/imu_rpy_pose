@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2025 Ryo Funai
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef LIVOX_IMU_TEST__IMU_PROCESSOR_HPP_
-#define LIVOX_IMU_TEST__IMU_PROCESSOR_HPP_
+#ifndef IMU_RPY_POSE__IMU_PROCESSOR_HPP_
+#define IMU_RPY_POSE__IMU_PROCESSOR_HPP_
 
 #include <Eigen/Geometry>
 #include <rclcpp/time.hpp>
 #include <vector>
 
-namespace livox_imu_test
+namespace imu_rpy_pose
 {
 
 struct ImuProcessorParams
@@ -62,6 +62,6 @@ private:
   Eigen::Vector3d position_ {Eigen::Vector3d::Zero()};
 };
 
-}  // namespace livox_imu_test
+}  // namespace imu_rpy_pose
 
-#endif  // LIVOX_IMU_TEST__IMU_PROCESSOR_HPP_
+#endif  // IMU_RPY_POSE__IMU_PROCESSOR_HPP_
