@@ -35,7 +35,7 @@ TEST(ImuProcessor, BiasEstimationStopsIntegrationUntilReady)
 TEST(ImuProcessor, ClippingLimitsAngularVelocity)
 {
   ImuProcessorParams params;
-  params.bias_enable = false;
+  params.bias_sample_count = 1;
   params.clip_enable = true;
   params.clip_max_rad_per_s = 1.0;
   params.dt_check_enable = false;
@@ -55,7 +55,7 @@ TEST(ImuProcessor, ClippingLimitsAngularVelocity)
 TEST(ImuProcessor, LowPassFiltersAngularVelocity)
 {
   ImuProcessorParams params;
-  params.bias_enable = false;
+  params.bias_sample_count = 1;
   params.clip_enable = false;
   params.dt_check_enable = false;
   params.lpf_enable = true;
@@ -76,18 +76,19 @@ TEST(ImuProcessor, LowPassFiltersAngularVelocity)
 TEST(ImuProcessor, DtCheckSkipsOutOfRangeSamples)
 {
   ImuProcessorParams params;
-  params.bias_enable = false;
   params.clip_enable = false;
   params.lpf_enable = false;
   params.dt_check_enable = true;
   params.dt_min = 0.01;
   params.dt_max = 0.02;
+  params.bias_sample_count = 1;
   ImuProcessor proc(params);
 
+  Eigen::Vector3d gyro_init = Eigen::Vector3d::Zero();
   Eigen::Vector3d gyro = Eigen::Vector3d(1.0, 0.0, 0.0);
   Eigen::Vector3d acc = Eigen::Vector3d::Zero();
 
-  EXPECT_TRUE(proc.process(rclcpp::Time(0, 0, RCL_ROS_TIME), gyro, acc));                 // init
+  EXPECT_TRUE(proc.process(rclcpp::Time(0, 0, RCL_ROS_TIME), gyro_init, acc));            // init (bias計測)
 
   EXPECT_FALSE(proc.process(rclcpp::Time(0, 1000000, RCL_ROS_TIME), gyro, acc));          // dt too small -> skip
   EXPECT_NEAR(proc.orientation().angularDistance(Eigen::Quaterniond::Identity()), 0.0, 1e-9);
@@ -106,7 +107,7 @@ TEST(ImuProcessor, DtCheckSkipsOutOfRangeSamples)
 TEST(ImuProcessor, IntegratesYawPitchRoll)
 {
   ImuProcessorParams params;
-  params.bias_enable = false;
+  params.bias_sample_count = 1;
   params.clip_enable = false;
   params.lpf_enable = false;
   params.dt_check_enable = false;

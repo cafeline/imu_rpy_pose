@@ -6,13 +6,13 @@
 
 #include <Eigen/Geometry>
 #include <rclcpp/time.hpp>
+#include <vector>
 
 namespace livox_imu_test
 {
 
 struct ImuProcessorParams
 {
-  bool bias_enable {true};
   int bias_sample_count {200};
 
   bool clip_enable {true};
@@ -53,8 +53,7 @@ private:
 
   bool bias_ready_ {false};
   Eigen::Vector3d bias_ {Eigen::Vector3d::Zero()};
-  Eigen::Vector3d bias_sum_ {Eigen::Vector3d::Zero()};
-  int bias_count_ {0};
+  std::vector<Eigen::Vector3d> bias_samples_;
 
   Eigen::Vector3d lpf_prev_ {Eigen::Vector3d::Zero()};
   bool lpf_initialized_ {false};

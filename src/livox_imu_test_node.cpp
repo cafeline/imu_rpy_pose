@@ -32,7 +32,6 @@ private:
   void declare_parameters()
   {
     this->declare_parameter<std::string>("imu_topic", "livox/imu");
-    this->declare_parameter<bool>("bias_enable", true);
     this->declare_parameter<int>("bias_sample_count", 200);
     this->declare_parameter<bool>("clip_enable", true);
     this->declare_parameter<double>("clip_max_rad_per_s", 5.0);
@@ -53,7 +52,6 @@ private:
     imu_topic_ = this->get_parameter("imu_topic").as_string();
 
     ImuProcessorParams params;
-    params.bias_enable = this->get_parameter("bias_enable").as_bool();
     params.bias_sample_count = this->get_parameter("bias_sample_count").as_int();
     params.clip_enable = this->get_parameter("clip_enable").as_bool();
     params.clip_max_rad_per_s = this->get_parameter("clip_max_rad_per_s").as_double();
@@ -71,16 +69,6 @@ private:
 
   void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
   {
-    const rclcpp::Time stamp(msg->header.stamp);
-    if (have_prev_imu_stamp_) {
-      const double dt_ms = (stamp - prev_imu_stamp_).seconds() * 1e3;
-      RCLCPP_INFO(this->get_logger(), "IMU dt: %.3f ms", dt_ms);
-    } else {
-      RCLCPP_INFO(this->get_logger(), "IMU dt: 初回メッセージ");
-      have_prev_imu_stamp_ = true;
-    }
-    prev_imu_stamp_ = stamp;
-
     Eigen::Vector3d gyro(
       msg->angular_velocity.x,
       msg->angular_velocity.y,
@@ -91,7 +79,13 @@ private:
       msg->linear_acceleration.z);
 
     const bool updated = processor_.process(msg->header.stamp, gyro, acc);
-    if (!updated) {
+
+    if (processor_.bias_ready() && !calibration_announced_) {
+      RCLCPP_INFO(this->get_logger(), "IMUバイアスのキャリブレーションが完了しました");
+      calibration_announced_ = true;
+    }
+
+    if (!processor_.bias_ready() || !updated) {
       return;
     }
 
@@ -131,8 +125,7 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-  bool have_prev_imu_stamp_{false};
-  rclcpp::Time prev_imu_stamp_;
+  bool calibration_announced_{false};
   ImuProcessor processor_;
 };
 

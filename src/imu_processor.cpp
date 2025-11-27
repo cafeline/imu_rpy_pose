@@ -5,9 +5,50 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace livox_imu_test
 {
+
+namespace
+{
+
+double median(std::vector<double> values)
+{
+  if (values.empty()) {
+    return 0.0;
+  }
+  const auto mid = values.begin() + values.size() / 2;
+  std::nth_element(values.begin(), mid, values.end());
+  double med = *mid;
+  if (values.size() % 2 == 0) {
+    const auto mid_prev = values.begin() + (values.size() / 2 - 1);
+    std::nth_element(values.begin(), mid_prev, values.end());
+    med = 0.5 * (med + *mid_prev);
+  }
+  return med;
+}
+
+Eigen::Vector3d compute_median(const std::vector<Eigen::Vector3d> & samples)
+{
+  if (samples.empty()) {
+    return Eigen::Vector3d::Zero();
+  }
+  std::vector<double> xs;
+  std::vector<double> ys;
+  std::vector<double> zs;
+  xs.reserve(samples.size());
+  ys.reserve(samples.size());
+  zs.reserve(samples.size());
+  for (const auto & s : samples) {
+    xs.push_back(s.x());
+    ys.push_back(s.y());
+    zs.push_back(s.z());
+  }
+  return Eigen::Vector3d(median(xs), median(ys), median(zs));
+}
+
+}  // namespace
 
 ImuProcessor::ImuProcessor(const ImuProcessorParams & params)
 : params_(params)
@@ -19,8 +60,7 @@ void ImuProcessor::reset()
   have_stamp_ = false;
   bias_ready_ = false;
   bias_ = Eigen::Vector3d::Zero();
-  bias_sum_ = Eigen::Vector3d::Zero();
-  bias_count_ = 0;
+  bias_samples_.clear();
   lpf_initialized_ = false;
   lpf_prev_ = Eigen::Vector3d::Zero();
   orientation_ = Eigen::Quaterniond::Identity();
@@ -37,21 +77,16 @@ bool ImuProcessor::process(
   const Eigen::Vector3d & angular_velocity,
   const Eigen::Vector3d & linear_acceleration)
 {
-  // 初回は時刻を保持し、バイアス有効なら積算のみを行う
+  // 初回は時刻を保持し、バイアス推定のため積算のみを行う
   if (!have_stamp_) {
     last_stamp_ = stamp;
     have_stamp_ = true;
-    if (params_.bias_enable) {
-      bias_sum_ += angular_velocity;
-      bias_count_++;
-      if (bias_count_ >= params_.bias_sample_count) {
-        bias_ = bias_sum_ / static_cast<double>(bias_count_);
-        bias_ready_ = true;
-      } else {
-        bias_ready_ = false;
-      }
-    } else {
+    bias_samples_.push_back(angular_velocity);
+    if (bias_samples_.size() >= static_cast<size_t>(params_.bias_sample_count)) {
+      bias_ = compute_median(bias_samples_);
       bias_ready_ = true;
+    } else {
+      bias_ready_ = false;
     }
     if (params_.lpf_enable) {
       lpf_prev_ = angular_velocity;
@@ -63,11 +98,10 @@ bool ImuProcessor::process(
   double dt = static_cast<double>((stamp - last_stamp_).nanoseconds()) / 1e9;
 
   // バイアス推定（初期Nサンプルのみ、dtチェックとは独立）
-  if (params_.bias_enable) {
-    bias_sum_ += angular_velocity;
-    bias_count_++;
-    if (bias_count_ >= params_.bias_sample_count) {
-      bias_ = bias_sum_ / static_cast<double>(bias_count_);
+  if (!bias_ready_) {
+    bias_samples_.push_back(angular_velocity);
+    if (bias_samples_.size() >= static_cast<size_t>(params_.bias_sample_count)) {
+      bias_ = compute_median(bias_samples_);
       bias_ready_ = true;
     }
   }
@@ -83,13 +117,11 @@ bool ImuProcessor::process(
   last_stamp_ = stamp;
 
   Eigen::Vector3d gyro = angular_velocity;
-  if (params_.bias_enable) {
-    if (bias_ready_) {
-      gyro -= bias_;
-    } else if (bias_count_ > 0) {
-      const Eigen::Vector3d provisional_bias = bias_sum_ / static_cast<double>(bias_count_);
-      gyro -= provisional_bias;
-    }
+  if (bias_ready_) {
+    gyro -= bias_;
+  } else if (!bias_samples_.empty()) {
+    const Eigen::Vector3d provisional_bias = compute_median(bias_samples_);
+    gyro -= provisional_bias;
   }
 
   if (params_.clip_enable) {
