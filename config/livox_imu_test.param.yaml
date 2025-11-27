@@ -1,0 +1,14 @@
+livox_imu_test:
+  ros__parameters:
+    imu_topic: "livox/imu"
+    bias_enable: true
+    bias_sample_count: 50
+    clip_enable: true
+    clip_max_rad_per_s: 5.0
+    lpf_enable: true
+    lpf_alpha: 0.2
+    dt_check_enable: true
+    dt_min: 0.002
+    dt_max: 0.02
+    marker_frame: "livox_frame"
+    marker_topic: "imu_arrow"
