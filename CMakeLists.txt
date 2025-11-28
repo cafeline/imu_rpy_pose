@@ -13,6 +13,7 @@ find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(std_msgs REQUIRED)
 
 add_library(imu_processor src/imu_processor.cpp)
 target_include_directories(imu_processor PUBLIC
@@ -34,6 +35,7 @@ ament_target_dependencies(imu_rpy_pose_node
   visualization_msgs
   tf2
   tf2_geometry_msgs
+  std_msgs
 )
 
 install(TARGETS imu_rpy_pose_node imu_processor
@@ -55,6 +57,18 @@ if(BUILD_TESTING)
   ament_add_gtest(test_imu_processor test/test_imu_processor.cpp)
   target_link_libraries(test_imu_processor imu_processor)
   ament_target_dependencies(test_imu_processor rclcpp)
+
+  ament_add_gtest(test_yaw_publisher
+    test/test_yaw_publisher.cpp)
+  target_link_libraries(test_yaw_publisher imu_processor)
+  ament_target_dependencies(test_yaw_publisher
+    rclcpp
+    sensor_msgs
+    std_msgs
+    tf2
+    tf2_geometry_msgs
+    visualization_msgs
+  )
 endif()
 
 ament_package()
