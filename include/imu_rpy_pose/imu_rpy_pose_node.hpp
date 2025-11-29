@@ -7,11 +7,12 @@
 #include "imu_rpy_pose/imu_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-#include <std_msgs/msg/float64.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2/utils.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 namespace imu_rpy_pose
 {
@@ -25,10 +26,10 @@ public:
     declare_parameters();
     load_parameters();
 
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
     marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
       marker_topic_, rclcpp::QoS(1).transient_local());
-    yaw_pub_ = this->create_publisher<std_msgs::msg::Float64>(
-      yaw_topic_, rclcpp::SensorDataQoS());
 
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
       imu_topic_, rclcpp::SensorDataQoS(),
@@ -49,7 +50,9 @@ private:
     this->declare_parameter<double>("dt_max", 0.05);
     this->declare_parameter<std::string>("marker_frame", "livox_frame");
     this->declare_parameter<std::string>("marker_topic", "imu_arrow");
-    this->declare_parameter<std::string>("yaw_topic", "imu_yaw");
+    this->declare_parameter<bool>("publish_yaw_tf", true);
+    this->declare_parameter<std::string>("yaw_tf_parent_frame", "odom");
+    this->declare_parameter<std::string>("yaw_tf_child_frame", "imu_heading");
   }
 
   void load_parameters()
@@ -68,7 +71,9 @@ private:
 
     marker_frame_ = this->get_parameter("marker_frame").as_string();
     marker_topic_ = this->get_parameter("marker_topic").as_string();
-    yaw_topic_ = this->get_parameter("yaw_topic").as_string();
+    publish_yaw_tf_ = this->get_parameter("publish_yaw_tf").as_bool();
+    yaw_tf_parent_frame_ = this->get_parameter("yaw_tf_parent_frame").as_string();
+    yaw_tf_child_frame_ = this->get_parameter("yaw_tf_child_frame").as_string();
 
     processor_.set_params(params);
   }
@@ -103,10 +108,6 @@ private:
     q.setW(ori.w());
     const double yaw = tf2::getYaw(q);
 
-    std_msgs::msg::Float64 yaw_msg;
-    yaw_msg.data = yaw;
-    yaw_pub_->publish(yaw_msg);
-
     visualization_msgs::msg::Marker marker;
     marker.header.stamp = msg->header.stamp;
     marker.header.frame_id = marker_frame_;
@@ -127,16 +128,33 @@ private:
     marker.color.b = 0.2;
     marker.lifetime = rclcpp::Duration(0, 0);
     marker_pub_->publish(marker);
+
+    if (publish_yaw_tf_) {
+      geometry_msgs::msg::TransformStamped tf_msg;
+      tf_msg.header.stamp = msg->header.stamp;
+      tf_msg.header.frame_id = yaw_tf_parent_frame_;
+      tf_msg.child_frame_id = yaw_tf_child_frame_;
+      tf_msg.transform.translation.x = 0.0;
+      tf_msg.transform.translation.y = 0.0;
+      tf_msg.transform.translation.z = 0.0;
+
+      tf2::Quaternion q_yaw;
+      q_yaw.setRPY(0.0, 0.0, yaw);
+      tf_msg.transform.rotation = tf2::toMsg(q_yaw);
+      tf_broadcaster_->sendTransform(tf_msg);
+    }
   }
 
   std::string imu_topic_;
   std::string marker_frame_;
   std::string marker_topic_;
-  std::string yaw_topic_;
+  bool publish_yaw_tf_{true};
+  std::string yaw_tf_parent_frame_;
+  std::string yaw_tf_child_frame_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr yaw_pub_;
+  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   bool calibration_announced_{false};
   ImuProcessor processor_;
 };

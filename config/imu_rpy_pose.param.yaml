@@ -11,3 +11,6 @@ imu_rpy_pose:
     dt_max: 0.006
     marker_frame: "livox_frame"
     marker_topic: "imu_arrow"
+    publish_yaw_tf: true
+    yaw_tf_parent_frame: "odom"
+    yaw_tf_child_frame: "imu_heading"
